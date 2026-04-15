@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Isaac Sim 即時監控面板</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #0f172a;
+        color: #e5e7eb;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+
+      header {
+        padding: 12px 20px;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.4);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .title {
+        font-size: 18px;
+        font-weight: 600;
+      }
+
+      .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: #22c55e;
+        box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.25);
+        margin-right: 6px;
+      }
+
+      .status {
+        display: flex;
+        align-items: center;
+        font-size: 13px;
+        color: #a5b4fc;
+      }
+
+      main {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 3fr 1fr;
+        gap: 16px;
+        padding: 16px 20px 20px;
+        box-sizing: border-box;
+      }
+
+      .card {
+        background: radial-gradient(circle at top left, #1f2937, #020617);
+        border-radius: 16px;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        padding: 14px 16px;
+        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.8);
+        display: flex;
+        flex-direction: column;
+      }
+
+      .card h2 {
+        margin: 0 0 10px;
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: #e5e7eb;
+      }
+
+      .card small {
+        font-size: 11px;
+        color: #9ca3af;
+      }
+
+      #map-container {
+        position: relative;
+        flex: 1;
+        margin-top: 10px;
+        min-height: 600px;
+        border-radius: 12px;
+        overflow: hidden;
+        background: radial-gradient(circle at top, #111827, #020617 55%);
+        border: 1px solid rgba(55, 65, 81, 0.9);
+      }
+
+      #map {
+        width: 100%;
+        height: 100%;
+        background-image: linear-gradient(
+            rgba(31, 41, 55, 0.55) 1px,
+            transparent 1px
+          ),
+          linear-gradient(90deg, rgba(31, 41, 55, 0.55) 1px, transparent 1px);
+        background-size: 22px 22px;
+        position: relative;
+      }
+
+      .zone {
+        position: absolute;
+        border-radius: 8px;
+        border: 2px dashed rgba(148, 163, 184, 0.9);
+        font-size: 13px;
+        padding: 4px 6px;
+        box-sizing: border-box;
+        color: #e5e7eb;
+        font-weight: 600;
+      }
+
+      .zone-label {
+        position: absolute;
+        top: 2px;
+        left: 4px;
+        font-weight: 600;
+      }
+
+      .forklift {
+        position: absolute;
+        width: 16px;
+        height: 20px;
+        background: linear-gradient(135deg, #fb923c, #f97316);
+        box-shadow: 0 0 8px rgba(251, 146, 60, 0.8);
+        transform-origin: 50% 50%;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+      }
+
+      /* 前方第一條叉子線 */
+      .forklift::before {
+        content: "";
+        position: absolute;
+        top: -6px;
+        left: 4px;
+        width: 1.5px;
+        height: 7px;
+        background: #e5e7eb;
+        box-shadow: 0 0 3px rgba(248, 250, 252, 0.8);
+      }
+
+      /* 前方第二條叉子線 */
+      .forklift::after {
+        content: "";
+        position: absolute;
+        top: -6px;
+        right: 4px;
+        width: 1.5px;
+        height: 7px;
+        background: #e5e7eb;
+        box-shadow: 0 0 3px rgba(248, 250, 252, 0.8);
+      }
+
+      .pose-info {
+        margin-top: 10px;
+        font-size: 12px;
+        color: #9ca3af;
+        display: flex;
+        gap: 16px;
+      }
+
+      .badge {
+        padding: 2px 6px;
+        border-radius: 999px;
+        background: rgba(79, 70, 229, 0.2);
+        color: #c4b5fd;
+        font-size: 11px;
+      }
+
+      .form-group {
+        margin-top: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      label {
+        font-size: 12px;
+        color: #e5e7eb;
+        font-weight: 500;
+      }
+
+      input,
+      textarea {
+        background: rgba(15, 23, 42, 0.9);
+        border-radius: 10px;
+        border: 1px solid rgba(75, 85, 99, 0.9);
+        color: #e5e7eb;
+        padding: 8px 10px;
+        font-size: 13px;
+        outline: none;
+        resize: none;
+      }
+
+      input:focus,
+      textarea:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 1px rgba(129, 140, 248, 0.75);
+      }
+
+      button {
+        margin-top: 6px;
+        padding: 7px 12px;
+        border-radius: 999px;
+        border: none;
+        background: linear-gradient(135deg, #6366f1, #22c55e);
+        color: white;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 10px 25px rgba(79, 70, 229, 0.6);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      button span {
+        font-size: 11px;
+        opacity: 0.9;
+      }
+
+      button:active {
+        transform: translateY(1px);
+        box-shadow: 0 6px 18px rgba(79, 70, 229, 0.8);
+      }
+
+      .log {
+        flex: 1;
+        margin-top: 10px;
+        padding: 8px 10px;
+        border-radius: 10px;
+        background: rgba(15, 23, 42, 0.98);
+        border: 1px solid rgba(55, 65, 81, 0.9);
+        font-size: 11px;
+        color: #9ca3af;
+        overflow-y: auto;
+        white-space: pre-line;
+      }
+
+      .log-line {
+        margin-bottom: 4px;
+      }
+
+      .log-time {
+        color: #6b7280;
+      }
+
+      .log-tag {
+        color: #a5b4fc;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="title">Isaac Sim 倉庫監控面板</div>
+      <div class="status">
+        <div class="status-dot"></div>
+        <span>連線至本機模擬（輪詢 /api/pose）</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="card">
+        <h2>倉庫平面圖（2D 示意）</h2>
+        <small>根據 Isaac Sim 傳回的座標，在此簡化平面上顯示機器車的位置與朝向。</small>
+        <div id="map-container">
+          <div id="map">
+            <!-- Zone 4, 5, 6, Prepare 根據實際座標自動計算位置 -->
+            <div
+              class="zone"
+              id="zone-4"
+              style="border-color: rgba(0, 150, 255, 0.9);"
+            >
+              <span class="zone-label">Zone 4</span>
+            </div>
+            <div
+              class="zone"
+              id="zone-5"
+              style="border-color: rgba(255, 255, 0, 0.9);"
+            >
+              <span class="zone-label">Zone 5</span>
+            </div>
+            <div
+              class="zone"
+              id="zone-6"
+              style="border-color: rgba(255, 0, 255, 0.9);"
+            >
+              <span class="zone-label">Zone 6</span>
+            </div>
+            <div
+              class="zone"
+              id="zone-prepare"
+              style="border-color: rgba(255, 165, 0, 0.9);"
+            >
+              <span class="zone-label">Prepare</span>
+            </div>
+
+            <div id="forklift" class="forklift"></div>
+          </div>
+        </div>
+
+        <div class="pose-info">
+          <div>
+            <span class="badge">目前位置</span>
+            <div id="pose-text">等待資料...</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>控制面板</h2>
+        <small>輸入指令後點擊「開始執行」</small>
+
+        <div class="form-group">
+          <div>
+            <label for="cmd-input">指令</label>
+            <input
+              id="cmd-input"
+              type="text"
+              placeholder="例如：Zone3-Prepare"
+            />
+          </div>
+          <button id="send-btn" style="width: 100%;">
+            開始執行
+          </button>
+          <button id="reset-btn" style="margin-top: 8px; width: 100%; background: linear-gradient(135deg, #6b7280, #4b5563);">
+            重置
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      // 簡單把 Isaac Sim 世界座標映射到這個 2D 圖的像素座標
+      // 你可以依實際倉庫尺寸調整 scale / offset
+      const map = document.getElementById("map");
+      const forkliftEl = document.getElementById("forklift");
+      const poseText = document.getElementById("pose-text");
+
+      // 世界座標轉換參數（簡化版）
+      const SCALE = 18; // 1 公尺 ≈ 18 px（增加這個值可以讓地圖和 Zone 顯示更大）
+      const OFFSET_X = 250; // 世界 (0,0) 對應到 map 上的偏移
+      const OFFSET_Y = 300;
+
+      function worldToScreen(x, y) {
+        const sx = OFFSET_X + x * SCALE;
+        const sy = OFFSET_Y - y * SCALE; // 反轉 Y 讓上方為正
+        return { x: sx, y: sy };
+      }
+
+      // Zone 定義（根據 avg.py 中的實際座標）
+      const zones = {
+        "zone-4": {
+          x: -5.5,
+          yMin: 8.0,
+          yMax: 16.0,
+          width: 1.2, // 顯示寬度（公尺）- 增大讓 Zone 更明顯
+        },
+        "zone-5": {
+          x: -0.5,
+          yMin: 8.0,
+          yMax: 16.0,
+          width: 1.2,
+        },
+        "zone-6": {
+          x: 5.5,
+          yMin: 8.0,
+          yMax: 16.0,
+          width: 1.2,
+        },
+        "zone-prepare": {
+          x: -9.0,
+          yMin: -4.0,
+          yMax: 8.0,
+          width: 1.2,
+        },
+      };
+
+      // 根據實際座標更新 Zone 位置
+      function updateZones() {
+        for (const [zoneId, zone] of Object.entries(zones)) {
+          const zoneEl = document.getElementById(zoneId);
+          if (!zoneEl) continue;
+
+          // 計算中心點
+          const centerY = (zone.yMin + zone.yMax) / 2;
+          const { x: sx, y: sy } = worldToScreen(zone.x, centerY);
+
+          // 計算尺寸（像素）
+          const widthPx = zone.width * SCALE;
+          const heightPx = (zone.yMax - zone.yMin) * SCALE;
+
+          // 設定位置和大小
+          zoneEl.style.left = `${sx - widthPx / 2}px`;
+          zoneEl.style.top = `${sy - heightPx / 2}px`;
+          zoneEl.style.width = `${widthPx}px`;
+          zoneEl.style.height = `${heightPx}px`;
+        }
+      }
+
+      async function fetchPose() {
+        try {
+          const res = await fetch("/api/pose", { cache: "no-store" });
+          if (!res.ok) return;
+          const data = await res.json();
+          updateForklift(data);
+        } catch (err) {
+          // 簡單忽略錯誤，避免界面亂跳
+        }
+      }
+
+      function updateForklift(pose) {
+        const { x, y, yaw } = pose;
+        const { x: sx, y: sy } = worldToScreen(x, y);
+
+        // 檢查機器車是否停止移動（只在執行中時檢查）
+        if (isExecuting) {
+          checkIfStopped(x, y);
+        }
+
+        // 中心對齊
+        const rect = map.getBoundingClientRect();
+        const fkW = 16; // 更新為新的寬度
+        const fkH = 20; // 更新為新的高度
+
+        forkliftEl.style.left = `${sx - fkW / 2}px`;
+        forkliftEl.style.top = `${sy - fkH / 2}px`;
+
+        // 角度轉換：數學角度（0度=向右，逆時針為正）→ CSS角度（0度=向上，順時針為正）
+        // 公式：CSS角度 = 90度 - 數學角度
+        const cssAngle = 90 - yaw;
+        forkliftEl.style.transform = `rotate(${cssAngle}deg)`;
+
+        poseText.textContent = `x = ${x.toFixed(2)} m, y = ${y.toFixed(
+          2
+        )} m, yaw = ${yaw.toFixed(1)}°`;
+      }
+
+      let isExecuting = false;
+      let lastPosition = null; // 上一個位置
+      let lastPositionTime = null; // 上一個位置的時間
+      const STATIONARY_THRESHOLD = 0.05; // 位置變化閾值（公尺），小於這個值視為不動
+      const STATIONARY_TIME = 3000; // 不動持續時間（毫秒），3秒不動就認為完成
+
+      // 恢復按鈕狀態的函數
+      function resetButtonState() {
+        isExecuting = false;
+        lastPosition = null;
+        lastPositionTime = null;
+        document.getElementById("send-btn").disabled = false;
+        document.getElementById("send-btn").style.opacity = "1";
+        document.getElementById("send-btn").style.cursor = "pointer";
+        document.getElementById("send-btn").textContent = "開始執行";
+        document.getElementById("cmd-input").disabled = false;
+      }
+
+      // 檢查機器車是否停止移動
+      function checkIfStopped(currentX, currentY) {
+        if (!isExecuting) return;
+
+        const now = Date.now();
+        
+        if (lastPosition === null) {
+          // 第一次記錄位置
+          lastPosition = { x: currentX, y: currentY };
+          lastPositionTime = now;
+          return;
+        }
+
+        // 計算位置變化距離
+        const dx = currentX - lastPosition.x;
+        const dy = currentY - lastPosition.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < STATIONARY_THRESHOLD) {
+          // 位置幾乎沒變
+          if (lastPositionTime === null) {
+            lastPositionTime = now;
+          } else {
+            // 檢查不動持續時間
+            const stationaryDuration = now - lastPositionTime;
+            if (stationaryDuration >= STATIONARY_TIME) {
+              // 已經不動超過3秒，認為任務完成
+              resetButtonState();
+            }
+          }
+        } else {
+          // 位置有變化，重置計時
+          lastPosition = { x: currentX, y: currentY };
+          lastPositionTime = null;
+        }
+      }
+
+      document.getElementById("send-btn").addEventListener("click", async () => {
+        if (isExecuting) {
+          return;
+        }
+
+        const cmdInput = document.getElementById("cmd-input");
+        const command = cmdInput.value.trim() || "未指定指令";
+
+        try {
+          // 發送指令到後端
+          const commandResponse = await fetch("/api/command", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              destination: command,
+              raw: command,
+            }),
+          });
+
+          // 發送開始信號
+          const startResponse = await fetch("/api/start", {
+            method: "POST",
+          });
+
+          if (startResponse.ok) {
+            isExecuting = true;
+            // 重置位置追蹤
+            lastPosition = null;
+            lastPositionTime = null;
+            document.getElementById("send-btn").disabled = true;
+            document.getElementById("send-btn").style.opacity = "0.6";
+            document.getElementById("send-btn").style.cursor = "not-allowed";
+            document.getElementById("send-btn").textContent = "執行中...";
+            cmdInput.disabled = true;
+          }
+        } catch (err) {
+          console.error("執行錯誤：", err);
+        }
+      });
+
+      document.getElementById("reset-btn").addEventListener("click", async () => {
+        try {
+          const resetResponse = await fetch("/api/reset", {
+            method: "POST",
+          });
+
+          if (resetResponse.ok) {
+            resetButtonState();
+          }
+        } catch (err) {
+          console.error("重置錯誤：", err);
+        }
+      });
+
+      // 初始化 Zone 位置
+      updateZones();
+
+      // 每 200ms 輪詢一次位姿
+      setInterval(fetchPose, 200);
+    </script>
+  </body>
+  </html>
+
+
