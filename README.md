@@ -1,7 +1,5 @@
 # 巨量資料分析期末專題：Isaac Sim 倉儲叉車監控與控制系統
 
-完整檔案：https://drive.google.com/drive/folders/1izmM1tDj53Wz2Foz9Cha8KURc7s638yV?usp=drive_link
-
 本專案結合 **Isaac Sim 模擬腳本**、**FastAPI 後端** 與 **Web 即時儀表板**，用於展示倉儲場景中叉車（Forklift）移動、避障、任務觸發與位置回傳的完整流程。
 
 核心目標是讓使用者能透過網頁端發出開始指令，並在 2D 面板上即時觀察 Isaac Sim 內叉車的位置與朝向變化。
